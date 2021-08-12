@@ -9,7 +9,7 @@ from torchvision.datasets import FashionMNIST
 import torchvision.transforms as transforms
 import cv2
 
-def load_data(opt, normal_classes):
+def load_data(opt, normal_classes,train = True,check =False):
 
     transform = transforms.Compose(
         [
@@ -20,15 +20,20 @@ def load_data(opt, normal_classes):
     )
 
     if opt.dataset == 'MNIST':
-        dataset = MNIST(root='C:\\Users\\LMH\Desktop\\data\\mnist',download=opt.train,transform=transform)
+        dataset = MNIST(root='C:\\Users\\LMH\Desktop\\data\\mnist',download=True,transform=transform)
     normal_img, normal_lb, abnormal_img, abnormal_lb = get_mnist_anomaly(dataset.data, dataset.targets,normal_classes,'')
 
-    if opt.train:
-        dataset.data = normal_img
-        dataset.targets = normal_lb
+    if check:
+        dataset.data = abnormal_img
+        dataset.targets = abnormal_lb
     else:
-        dataset.data = torch.cat((abnormal_img,normal_img),dim=0)
-        dataset.targets = torch.cat((abnormal_lb,normal_lb), dim=0)
+        if train:
+            dataset.data = normal_img
+            dataset.targets = normal_lb
+        else:
+            dataset.data = torch.cat((abnormal_img,normal_img),dim=0)
+            dataset.targets = torch.cat((abnormal_lb,normal_lb), dim=0)
+
     
     
     dataloader = DataLoader(dataset,batch_size=opt.batchsize,
@@ -41,7 +46,7 @@ def get_mnist_anomaly(img,lbl ,normal_c:list, manualseed= -1):
 
     # normal_idx = torch.from_numpy(np.where(lbl.numpy() in normal_c))[0]
     normal_idx = torch.from_numpy(np.where(np.isin(lbl.numpy(),normal_c))[0])
-    abnormal_idx = torch.from_numpy(np.where(False *(np.isin(lbl.numpy(), normal_c)))[0])
+    abnormal_idx = torch.from_numpy(np.where((np.isin(lbl.numpy(), normal_c,invert=True)))[0])
 
     normal_img = img[normal_idx]
     abnormal_img = img[abnormal_idx]
@@ -58,3 +63,5 @@ def get_mnist_anomaly(img,lbl ,normal_c:list, manualseed= -1):
     # abnormal_lbl[:] = 
     
     return normal_img,normal_lbl, abnormal_img, abnormal_lbl
+
+

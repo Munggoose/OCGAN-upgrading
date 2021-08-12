@@ -65,13 +65,20 @@ class Visualizer():
         # fixed = self.normalize(fixed.detached.cpu().numpy())
         reals = self.normalize(reals.detach().cpu().numpy())
         fakes = self.normalize(fakes.detach().cpu().numpy())
-        if fixed:
+        if fixed is not None:
             fixed = self.normalize(fixed.detach().cpu().numpy())
 
-        self.vis.images(reals, win=1, opts={'title': 'Reals'})
-        self.vis.images(fakes, win=2, opts={'title': 'Fakes'})
-        if fixed:
-            self.vis.images(fixed, win=3, opts={'title': 'Fixed'})
+        self.vis.images(reals, win=1, opts={'title': 'Inputs'})
+        self.vis.images(fakes, win=2, opts={'title': 'Reconstruct'})
+        if fixed is not None:
+            self.vis.images(fixed, win=3, opts={'title': 'L2_generator'})
+
+
+    def display_fixed_images(self, input, output):
+        input = self.normalize(input.detach().cpu().numpy())
+        output = self.normalize(output.detach().cpu().numpy())
+        self.vis.images(input, win=4, opts={'title': 'Fixed'})
+        self.vis.images(output, win=5, opts={'title': 'test_output'})
 
     def print_current(self):
         pass

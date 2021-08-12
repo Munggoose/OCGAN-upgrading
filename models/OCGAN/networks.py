@@ -19,7 +19,7 @@ class Encoder(nn.Module):
     Args:
         nn ([type]): [description]
     """
-    
+
     def __init__(self,opt):
         super(Encoder,self).__init__()
         def conv_module(_in,_out):
@@ -59,11 +59,11 @@ class Encoder(nn.Module):
         output = self.out_layer(output)
         # print(output.shape)
         output = output.view(output.size(0),-1)
-        print(output.shape)
+        # print(output.shape)
         return output
 
 
-class Decoder( nn.Module):
+class Decoder_2( nn.Module):
     """DCGAN DECODER
 
     Args:
@@ -112,6 +112,63 @@ class Decoder( nn.Module):
         output = self.last_layer(output)
         return output
 
+
+class Decoder(nn.Module):
+    """
+    DCGAN DECODER NETWORK
+    """
+    def __init__(self,opt):
+        super(Decoder, self).__init__()
+        self.conv1 = nn.Upsample(scale_factor=2, mode='nearest')
+        self.conv2 = nn.ConvTranspose2d(32, 32, 3, padding=3//2)
+        # self.activation = nn.Tanh()
+        self.conv3 = nn.ConvTranspose2d(32, 32, 3, padding=3//2)
+        self.batch_norm_1 = nn.BatchNorm2d(32)  
+
+        self.conv4 = nn.Upsample(scale_factor=2, mode='nearest')
+        self.conv5 = nn.ConvTranspose2d(32, 64, 3, padding=3//2)
+        self.conv6 = nn.ConvTranspose2d(64, 64, 3, padding=3//2)
+        self.batch_norm_2 = nn.BatchNorm2d(64)    
+        
+        self.conv7 = nn.Upsample(scale_factor=2, mode='nearest')
+        self.conv8 = nn.ConvTranspose2d(64, 64, 3)
+        self.conv9 = nn.ConvTranspose2d(64, 64, 3)
+        self.batch_norm_3 = nn.BatchNorm2d(64)    
+
+        self.conv10 = nn.ConvTranspose2d(64, 1, 3, padding=3//2)    
+
+    def forward(self, input):
+        # print('l2_input:',input.size(0))
+        output = input.view(input.size(0),32,3,3)
+        # print('l2_reshape:',output.shape)
+        output = self.conv1(output) 
+        # print('l2_output1:',output.shape)
+        output = torch.tanh(self.conv2(output))
+        # print('l2_output2:',output.shape)
+        output = torch.tanh(self.conv3(output))
+        output = self.batch_norm_1(output)
+        # print('l2_output3:',output.shape)
+
+        output = self.conv4(output)
+        # print('l2_output4:',output.shape)
+        output = torch.tanh(self.conv5(output))
+        # print('l2_output5:'/,output.shape)
+        output = torch.tanh(self.conv6(output))
+        output = self.batch_norm_2(output)
+        # print('l2_output6:',output.shape)
+
+        output = self.conv7(output)
+        # print('l2_output7:',output.shape)
+        output = torch.tanh(self.conv8(output)) 
+        # print('l2_output8:',output.shape)
+        output = torch.tanh(self.conv9(output))
+        output = self.batch_norm_3(output)
+        # print('l2_outpu/t9:',output.shape)
+        # output = output.permute((0, 2, 3, 1))
+        # output = output.contiguous().view(-1, 4 * 4 * 64) 
+        output = torch.sigmoid(self.conv10(output))   
+        # print('l2_output10:',output.shape)
+        return output
 
 class Discriminator_l(nn.Module):
     """Latent Discriminator
@@ -221,35 +278,36 @@ class Classifier(nn.Module):
 
         return output
 
-# if __name__ == '__main__':
-#     opt = Option().parse()
-#     dataloader = load_data(opt)
-#     enc = Encoder(opt)
-#     dec = Decoder(opt)
-#     dec_l = Discriminator_l(opt)
-#     dec_v = Discriminator_v(opt)
-#     clf = Classifier(opt)
+if __name__ == '__main__':
+    opt = Option().parse()
+    dataloader = load_data(opt,[1])
+    enc = Encoder(opt)
+    dec = Decoder(opt)
+    dec_l = Discriminator_l(opt)
+    dec_v = Discriminator_v(opt)
+    clf = Classifier(opt)
 
-#     for input, label in dataloader:
-#         output = enc(input)
-#         dec_output = dec(output)
-#         dec_l_output = dec_l(output)
-#         dec_v_output = dec_v(input)
-#         clf_output = clf(input)
+    for input, label in dataloader:
+        output = enc(input)
+        dec_output = dec(output)
+        dec_l_output = dec_l(output)
+        dec_v_output = dec_v(input)
+        clf_output = clf(input)
 
 
-        # print(output.shape)
-        # print(dec_output.shape)
-        # print(dec_l_output.shape)
-        # print(dec_v_output.shape)
-        # print(clf_output.shape)
-        # exit()
+        print(output.shape)
+        print(dec_output.shape)
+        print(dec_l_output.shape)
+        print(dec_v_output.shape)
+        print(clf_output.shape)
+        exit()
         
-        # print(output.shape)
+        print(output.shape)
         
 
-        # print(output.shape)
-        # output = dec(output)
-        # print(output.shape)
+        print(output.shape)
+        output = dec(output)
+        print(output.shape)
+        exit()
 
 

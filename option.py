@@ -6,7 +6,7 @@ class Option:
         
         self.opt = argparse.ArgumentParser()
         #train parameter
-        self.opt.add_argument("--n_epochs",type =int, default =200, help='number of epochs of training')
+        self.opt.add_argument("--n_epochs",type =int, default =700, help='number of epochs of training')
         self.opt.add_argument("--batchsize",type = int, default= 64, help='number of batchsize')
         self.opt.add_argument("--latent_dim",type=int, default= 32,help='dimension of latent vector' )
         self.opt.add_argument("--lr",type=float, default=0.001, help="learning rate")
