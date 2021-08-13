@@ -81,11 +81,48 @@ class OCgan():
         self.input= input.cuda()
         self.label = label.cuda()
 
+    def train_generator(self):
+        u = np.random.uniform(-1, 1, (self.opt.batchsize,self.opt.latent_size))   
+        self.l2 = torch.from_numpy(u).float().cuda()
+        self.fake_img = self.net_dec(self.l2)
+        
+        # logit_real_dv = self.net_D_v(self.input)
+        logit_fake_dv = self.net_D_v(self.fake_img)
+
+        label_real_Dv = Variable(torch.Tensor(logit_fake_dv.shape[0], 1).fill_(1.0)
+                                ,requires_grad=False).cuda()
+        
+        generator_loss = self.criterion_bce(logit_fake_dv,label_real_Dv)
+
+        self.net_dec.zero_grad()
+        generator_loss.backward()
+        self.optimizer_enc.step()
+
+        def train_generator(self):
+            u = np.random.uniform(-1, 1, (self.opt.batchsize,self.opt.latent_size))   
+            self.l2 = torch.from_numpy(u).float().cuda()
+            self.fake_img = self.net_dec(self.l2)
+            
+            # logit_real_dv = self.net_D_v(self.input)
+            logit_fake_dv = self.net_D_v(self.fake_img)
+            logit_real_dv = self.net_D_v(self.input)
+
+            label_real_Dv = Variable(torch.Tensor(logit_fake_dv.shape[0], 1).fill_(1.0)
+                                    ,requires_grad=False).cuda()
+
+            label_fake_Dv = Variable(torch.Tensor(logit_fake_dv.shape[0], 1).fill_(0.0)
+                                    ,requires_grad=False).cuda()
+            
+            dec_loss = (self.criterion_bce(logit_fake_dv,label_fake_Dv) + self.criterion_bce(logit_real_dv,label_real_Dv))/2
+
+            self.net_dec.zero_grad()
+            generator_loss.backward()
+            self.optimizer_enc.step()
 
     def train_ae(self):
         self.l1 = self.net_enc(self.input)
         self.rec_img = self.net_dec(self.l1)
-
+        
         self.net_enc.zero_grad()
         self.net_dec.zero_grad()
 
