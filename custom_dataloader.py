@@ -20,7 +20,7 @@ def load_data(opt, normal_classes,train = True,check =False):
     )
 
     if opt.dataset == 'MNIST':
-        dataset = MNIST(root='C:\\Users\\LMH\Desktop\\data\\mnist',download=True,transform=transform)
+        dataset = MNIST(root='C:\\Users\\LMH\Desktop\\data\\mnist',train=train,download=True,transform=transform)
     normal_img, normal_lb, abnormal_img, abnormal_lb = get_mnist_anomaly(dataset.data, dataset.targets,normal_classes,'')
 
     if check:
@@ -52,13 +52,13 @@ def get_mnist_anomaly(img,lbl ,normal_c:list, manualseed= -1):
     abnormal_img = img[abnormal_idx]
     normal_lbl = lbl[normal_idx]
     abnormal_lbl = lbl[abnormal_idx]
+    
 
     for idx,c in enumerate(normal_c):
         c_idx = torch.from_numpy(np.where(normal_lbl.numpy() == c)[0])
         normal_lbl[c_idx] = idx+1
 
     abnormal_lbl[:] = 0
-    
     # abnormal_lbl =lbl[abnormal_idx]
     # abnormal_lbl[:] = 
     

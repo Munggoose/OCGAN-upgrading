@@ -1,3 +1,4 @@
+import os
 import torch
 import torchvision
 import torch.nn as nn
@@ -12,6 +13,8 @@ from models.OCGAN.networks import Classifier
 from utils.utils import weights_init
 from utils.visualizer import Visualizer
 from torch.autograd import Variable
+
+from models.OCGAN.evaluation import evaluate
 # sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(os.path.dirname(__file__)))))
 
 class OCgan():
@@ -57,15 +60,13 @@ class OCgan():
         self.fixed_rec_img = torch.empty(size= (self.opt.batchsize,self.opt.n_channels,self.opt.isize,self.opt.isize),
                                     dtype=torch.float32, device= torch.device(self.opt.device))
         
-
-
         #optimizer
         self.optimizer_enc = torch.optim.Adam(self.net_enc.parameters(), lr = self.opt.lr, betas=(0.9,0.99))
         self.optimizer_dec = torch.optim.Adam(self.net_dec.parameters(), lr = self.opt.lr, betas=(0.9,0.99))
         self.optimizer_D_l = torch.optim.Adam(self.net_D_l.parameters(), lr = self.opt.lr, betas=(0.9,0.99))
         self.optimizer_D_v = torch.optim.Adam(self.net_D_v.parameters(), lr = self.opt.lr, betas=(0.9,0.99))
         self.optimizer_clf = torch.optim.Adam(self.net_clf.parameters(), lr = self.opt.lr, betas=(0.9,0.99))
-        self.optimizer_l2 = torch.optim.Adam([{'params':self.l2}],lr =self.opt.lr, betas=(0.9,0.99))
+        self.optimizer_l2 = torch.optim.Adam([{'params': self.l2}],lr =self.opt.lr, betas=(0.9,0.99))
 
         #criterion
         self.criterion_mse = nn.MSELoss().cuda()
@@ -81,45 +82,11 @@ class OCgan():
         self.input= input.cuda()
         self.label = label.cuda()
 
-    def train_generator(self):
-        u = np.random.uniform(-1, 1, (self.opt.batchsize,self.opt.latent_size))   
-        self.l2 = torch.from_numpy(u).float().cuda()
-        self.fake_img = self.net_dec(self.l2)
-        
-        # logit_real_dv = self.net_D_v(self.input)
-        logit_fake_dv = self.net_D_v(self.fake_img)
-
-        label_real_Dv = Variable(torch.Tensor(logit_fake_dv.shape[0], 1).fill_(1.0)
-                                ,requires_grad=False).cuda()
-        
-        generator_loss = self.criterion_bce(logit_fake_dv,label_real_Dv)
-
-        self.net_dec.zero_grad()
-        generator_loss.backward()
-        self.optimizer_enc.step()
-
-        def train_generator(self):
-            u = np.random.uniform(-1, 1, (self.opt.batchsize,self.opt.latent_size))   
-            self.l2 = torch.from_numpy(u).float().cuda()
-            self.fake_img = self.net_dec(self.l2)
-            
-            # logit_real_dv = self.net_D_v(self.input)
-            logit_fake_dv = self.net_D_v(self.fake_img)
-            logit_real_dv = self.net_D_v(self.input)
-
-            label_real_Dv = Variable(torch.Tensor(logit_fake_dv.shape[0], 1).fill_(1.0)
-                                    ,requires_grad=False).cuda()
-
-            label_fake_Dv = Variable(torch.Tensor(logit_fake_dv.shape[0], 1).fill_(0.0)
-                                    ,requires_grad=False).cuda()
-            
-            dec_loss = (self.criterion_bce(logit_fake_dv,label_fake_Dv) + self.criterion_bce(logit_real_dv,label_real_Dv))/2
-
-            self.net_dec.zero_grad()
-            generator_loss.backward()
-            self.optimizer_enc.step()
-
     def train_ae(self):
+
+        self.net_dec.train()
+        self.net_enc.train()
+
         self.l1 = self.net_enc(self.input)
         self.rec_img = self.net_dec(self.l1)
         
@@ -134,83 +101,8 @@ class OCgan():
         # print(f'\rloss_AE: {self.loss_AE}',end='')
         # self.vis.display_current_images(self.input, self.rec_img)
 
-    def train(self):
-    
-        self.u = np.random.uniform(-1, 1, (self.opt.batchsize,self.opt.latent_size))
-        self.l2 = torch.from_numpy(self.u).float().cuda()
-        n = torch.randn(self.opt.batchsize, self.opt.n_channels,self.opt.isize,self.opt.isize).cuda()
-        
-        self.l1 = self.net_enc(self.input+n)
-        rec_img = self.net_dec(self.l1)
-        fake_img = self.net_dec(self.l2)
-
-        real_label = torch.ones(size=(self.opt.batchsize,1),requires_grad=False,device=torch.device(self.opt.device))
-        fake_label = torch.zeros(size=(self.opt.batchsize,1),requires_grad=False,device=torch.device(self.opt.device))
-
-        loss_clf = (self.criterion_bce(self.net_clf(rec_img),real_label) \
-                    + self.criterion_bce(self.net_clf(fake_img),fake_label)) / 2
-        
-        self.net_clf.zero_grad()
-        loss_clf.backward(retain_graph=True)
-        self.optimizer_clf.step()
-        
-        logit_real_l = self.net_D_l(self.l1)
-        logit_fake_l = self.net_D_l(self.l2)
-        real_label = torch.ones(size=(self.opt.batchsize,1),requires_grad=False,device=torch.device(self.opt.device))
-        fake_label = torch.zeros(size=(self.opt.batchsize,1),requires_grad=False,device=torch.device(self.opt.device))
-
-        loss_D_l = (self.criterion_bce(logit_real_l,real_label) + self.criterion_bce(logit_real_l,fake_label))/2
-
-        self.net_D_l.zero_grad()
-        loss_D_l.backward(retain_graph=True)
-        self.optimizer_D_l.step()
-
-        logit_real_v = self.net_D_v(self.input)
-        logit_fake_v = self.net_D_v(self.net_dec(self.l2))
-
-        # self.optimizer_D_l.zero_grad()
-        # loss_D  = loss_D_v + loss_D_l
-        # self.net_dec.zero_grad()
-        # self.net_enc.zero_grad()
-        
-        # self.optimizer_D_v.zero_grad()
-
-        real_label = torch.ones(size=(self.opt.batchsize,1),requires_grad=False,device=torch.device(self.opt.device))
-        fake_label = torch.zeros(size=(self.opt.batchsize,1),requires_grad=False,device=torch.device(self.opt.device))
-
-        self.net_D_v.zero_grad()
-        loss_D_v = (self.criterion_bce(logit_real_v,real_label) + self.criterion_bce(logit_real_v,fake_label))/2
-        loss_D_v.backward()
-        self.optimizer_D_v.step()
-        
-        # loss_D.backward(retain_graph=True)
-        
-        for _ in range(self.opt.mining_iter):
-            real_label = torch.ones(size=(self.opt.batchsize,1),requires_grad=False,device=torch.device(self.opt.device))
-            fake_label = torch.zeros(size=(self.opt.batchsize,1),requires_grad=False,device=torch.device(self.opt.device))
-            mining_loss = self.criterion_bce(self.net_clf(self.net_dec(self.l2)),real_label)
-            self.optimizer_l2.zero_grad()
-            mining_loss.backward()
-            self.optimizer_l2.step()
-
-
-        real_label = torch.ones(size=(self.opt.batchsize,1),requires_grad=False,device=torch.device(self.opt.device))
-        fake_label = torch.zeros(size=(self.opt.batchsize,1),requires_grad=False,device=torch.device(self.opt.device))
-
-        fake_img = self.net_dec(self.l2)
-        rec_img = self.net_dec(self.net_enc(self.input + n))
-        loss_AE_l = self.criterion_bce(logit_real_l,real_label)  #+ self.criterion_bce(self.net_D_l(self.l2),self.fake_label)
-        loss_AE_v = self.criterion_bce(self.net_D_v(fake_img),fake_label) #self.criterion_bce(self.logit_real_v,self.real_label) + self.criterion_bce(self.net_D_v(self.fake_img),self.fake_label)
-        loss_AE_total = 10.0 * self.criterion_mse(rec_img ,self.input) + loss_AE_l + loss_AE_v
-
-        self.net_enc.zero_grad()
-        self.net_dec.zero_grad()
-        loss_AE_total.backward()
-        self.optimizer_enc.step()
-        self.optimizer_dec.step()
-
-
     def train_2(self):
+
         u = np.random.uniform(-1, 1, (self.opt.batchsize,self.opt.latent_size))   
         self.l2 = torch.from_numpy(u).float().cuda()
         dec_l2 = self.net_dec(self.l2)
@@ -286,6 +178,7 @@ class OCgan():
         fake_ae_img = self.net_D_v(self.fake_img)
         self.rec_img = self.net_dec(l1)
         self.loss_mse = self.criterion_mse(self.rec_img,self.input)
+    
         label_real_dl_ae = Variable(torch.Tensor(logits_C_fake.shape[0], 1).fill_(1.0)
                                 ,requires_grad=False).cuda()
         
@@ -308,7 +201,46 @@ class OCgan():
         self.fixed_rec_img = self.net_dec(self.net_enc(self.fixed_input))
         # self.net_dec.train()
         # self.net_enc.train()
+    
+    def evaluate(self,dataloader,epoch):
+        self.net_dec.eval()
+        self.net_enc.eval()
 
+        with torch.no_grad():
+            an_scores = torch.zeros(size=(len(dataloader.dataset),), dtype=torch.float32, device=self.opt.device)
+            gt_labels = torch.zeros(size=(len(dataloader.dataset),), dtype=torch.long,    device=self.opt.device)
+
+        for i, (inputs,labels) in enumerate(dataloader):
+            # self.set_input(inputs,labels)
+            inputs = inputs.cuda()
+            latent_i = self.net_enc(inputs)
+            fake_img = self.net_dec(latent_i)
+            inputs= inputs.view([self.opt.batchsize,-1]).cuda()
+            fake_img = fake_img.view([self.opt.batchsize,-1])
+            error = torch.mean(torch.pow((inputs - fake_img),2),dim=1)
+
+            an_scores[i*self.opt.batchsize : i*self.opt.batchsize + len(error)] = error.reshape(error.size(0))
+            gt_labels[i*self.opt.batchsize : i*self.opt.batchsize + error.size(0)] = labels.reshape(error.size(0))
+        
+
+
+        an_scores = (an_scores - torch.min(an_scores))/(torch.max(an_scores)-torch.min(an_scores))
+        auc, thres_hold = evaluate(gt_labels, an_scores)
+
+        self.vis.plot_current_acc(epoch,self.opt.test_ratio,auc)
+
+        self.net_dec.train()
+        self.net_enc.train()
+        return auc
+
+##
+    def save_weight(self, epoch):
+        if not os.path.exists(self.opt.weight_path):
+            os.mkdirs(self.opt.weight_path)
+
+        #only save decoder and encoder
+        torch.save({'net_dec':self.net_dec.state_dict(),'net_enc':self.net_enc.state_dict(),'l2':self.l2},
+                    os.path.join(self.opt.weight_path,f'{epoch}_weith.pt'))
 
 
     def visual(self,l2=False):

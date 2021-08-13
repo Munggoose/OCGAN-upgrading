@@ -166,7 +166,8 @@ class Decoder(nn.Module):
         # print('l2_outpu/t9:',output.shape)
         # output = output.permute((0, 2, 3, 1))
         # output = output.contiguous().view(-1, 4 * 4 * 64) 
-        output = torch.sigmoid(self.conv10(output))   
+        # output = torch.sigmoid(self.conv10(output))
+        output = self.conv10(output)
         # print('l2_output10:',output.shape)
         return output
 
