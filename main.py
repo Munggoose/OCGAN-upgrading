@@ -35,9 +35,10 @@ if __name__=='__main__':
             else:
                 model.train_2()
 
-        if (epoch+1) % 1 == opt.test_ratio == 0:
+        if (epoch) % opt.test_ratio == 0:
             cur_acc = model.evaluate(test_loader, epoch)
             if cur_acc >= best_acc:
+                best_acc = cur_acc
                 model.save_weight(epoch)
 
         if epoch < 15:

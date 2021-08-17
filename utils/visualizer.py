@@ -27,7 +27,7 @@ class Visualizer():
     def plot_current_acc(self,epoch,counter_ratio,acc):
         if not hasattr(self, 'acc_data') or self.acc_data is None:
             self.acc_data = {'X': [], 'Y': [], 'legend': ['acc']}
-        self.acc_data['X'].append(epoch/counter_ratio)
+        self.acc_data['X'].append(epoch+1/counter_ratio)
         self.acc_data['Y'].append(acc)
         self.vis.line(
             X=np.array(self.acc_data['X']),
