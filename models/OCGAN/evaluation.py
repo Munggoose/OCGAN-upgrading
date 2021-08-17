@@ -23,8 +23,8 @@ def roc(labels, scores, saveto=None):
     tpr = dict()
     roc_auc = dict()
 
-    labels = labels.detach().cpu().numpy()
-    scores = scores.detach().cpu().numpy()
+    # labels = labels.detach().cpu().numpy()
+    # scores = scores.detach().cpu().numpy()
 
     # True/False Positive Rates.
     fpr, tpr, thres_hold = roc_curve(labels, scores)

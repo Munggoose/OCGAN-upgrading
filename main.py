@@ -1,10 +1,10 @@
 import torch
 from option import Option
 from custom_dataloader import load_data
-# from models.OCGAN.OCGAN import OCgan
-from models.OCGAN_DCGAN_train.OCGAN import OCgan
-from tqdm import tqdm
+from models.OCGAN.OCGAN import OCgan
 
+# from models.OCGAN_DCGAN_train.OCGAN import OCgan
+from tqdm import tqdm
         
 
 if __name__=='__main__':
@@ -35,12 +35,12 @@ if __name__=='__main__':
             else:
                 model.train_2()
 
-        if (epoch+1) % opt.test_ratio == 0:
+        if (epoch+1) % 1 == opt.test_ratio == 0:
             cur_acc = model.evaluate(test_loader, epoch)
             if cur_acc >= best_acc:
                 model.save_weight(epoch)
 
-        if epoch < 13:
+        if epoch < 15:
             model.visual()
         else:
             for fixed,label in abnormal_train_loader:

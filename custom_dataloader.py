@@ -20,7 +20,7 @@ def load_data(opt, normal_classes,train = True,check =False):
     )
 
     if opt.dataset == 'MNIST':
-        dataset = MNIST(root='C:\\Users\\LMH\Desktop\\data\\mnist',train=train,download=True,transform=transform)
+        dataset = MNIST(root='./data/',train=train,download=True,transform=transform)
     normal_img, normal_lb, abnormal_img, abnormal_lb = get_mnist_anomaly(dataset.data, dataset.targets,normal_classes,'')
 
     if check:

@@ -84,9 +84,6 @@ class OCgan():
 
     def train_ae(self):
 
-        self.net_dec.train()
-        self.net_enc.train()
-
         self.l1 = self.net_enc(self.input)
         self.rec_img = self.net_dec(self.l1)
         
@@ -167,7 +164,7 @@ class OCgan():
         
         for i in range(5):
             logits_c_l2_mine = self.net_clf(self.net_dec(self.l2))
-            fake_label_mine = Variable(torch.Tensor(logits_C_fake.shape[0], 1).fill_(0.0)
+            fake_label_mine = Variable(torch.Tensor(logits_C_fake.shape[0], 1).fill_(1.0)
                                 ,requires_grad=False).cuda()
             loss_mine = self.criterion_bce(logits_c_l2_mine,fake_label_mine)
             self.optimizer_l2.zero_grad()
@@ -207,15 +204,51 @@ class OCgan():
         self.net_enc.eval()
 
         with torch.no_grad():
-            an_scores = torch.zeros(size=(len(dataloader.dataset),), dtype=torch.float32, device=self.opt.device)
-            gt_labels = torch.zeros(size=(len(dataloader.dataset),), dtype=torch.long,    device=self.opt.device)
+            an_scores = torch.zeros(size=(len(dataloader.dataset),), dtype=torch.float32, device=torch.device('cpu'))
+            gt_labels = torch.zeros(size=(len(dataloader.dataset),), dtype=torch.long,device=torch.device('cpu'))
+        # an_scores = np.zeros(shape=(len(dataloader.dataset,)))
+        # gt_labels = np.zeros(shape=(len(dataloader.dataset,)))
 
         for i, (inputs,labels) in enumerate(dataloader):
-            # self.set_input(inputs,labels)
-            inputs = inputs.cuda()
-            latent_i = self.net_enc(inputs)
+            self.set_input(inputs,labels)
+            # self.input = inputs.cuda()
+            latent_i = self.net_enc(self.input)
+            self.fake_img = self.net_dec(latent_i)
+            input= self.input.view([self.opt.batchsize,-1])
+            cpu_fake_img =  self.fake_img.view([self.opt.batchsize,-1])
+            self.error = torch.mean(torch.pow((input - cpu_fake_img),2),dim=1).detach().cpu()
+
+            # self.an_scores[i*self.opt.batchsize : i*self.opt.batchsize + len(self.error)] = self.error.reshape(self.error.size(0))
+            an_scores[i*self.opt.batchsize : i*self.opt.batchsize + len(self.error)] = self.error
+            gt_labels[i*self.opt.batchsize : i*self.opt.batchsize + self.error.size(0)] = labels #.view(self.error.size)
+
+        
+
+        # an_scores = (an_scores - torch.min(an_scores))/(torch.max(an_scores)-torch.min(an_scores))
+        an_scores = (an_scores - torch.min(an_scores))/(torch.max(an_scores)-torch.min(an_scores))
+        self.auc, self.thres_hold = evaluate(gt_labels, an_scores)
+
+        self.vis.plot_current_acc(epoch,self.opt.test_ratio,self.auc)
+
+        self.net_dec.train()
+        self.net_enc.train()
+        return self.auc
+
+
+    def evaluate2(self,dataloader_len,epoch):
+        self.net_dec.eval()
+        self.net_enc.eval()
+
+        with torch.no_grad():
+            an_scores = torch.zeros(size=(dataloader_len,), dtype=torch.float32, device=self.opt.device)
+            gt_labels = torch.zeros(size=(dataloader_len,), dtype=torch.long,    device=self.opt.device)
+
+        for i, (inputs,labels) in enumerate(dataloader):
+            self.set_input(inputs,labels)
+            # self.input = inputs.cuda()
+            latent_i = self.net_enc(self.input)
             fake_img = self.net_dec(latent_i)
-            inputs= inputs.view([self.opt.batchsize,-1]).cuda()
+            inputs= self.input.view([self.opt.batchsize,-1]).cuda()
             fake_img = fake_img.view([self.opt.batchsize,-1])
             error = torch.mean(torch.pow((inputs - fake_img),2),dim=1)
 
@@ -232,7 +265,6 @@ class OCgan():
         self.net_dec.train()
         self.net_enc.train()
         return auc
-
 ##
     def save_weight(self, epoch):
         if not os.path.exists(self.opt.weight_path):

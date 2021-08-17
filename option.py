@@ -13,7 +13,7 @@ class Option:
         self.opt.add_argument("--train",type=bool, default=True, help="Train mode check")
         self.opt.add_argument("--device",type=str, default='cuda', help=' train device cuda or cpu')
         self.opt.add_argument("--mining_iter",type=int, default=5, help='Informative-negative mining number of iteration')
-        self.opt.add_argument("--test_ratio",type=int,default=40, help = 'Accuracy check cycle')
+        self.opt.add_argument("--test_ratio",type=int,default=20, help = 'Accuracy check cycle')
 
         self.opt.add_argument("--n_channels",type=int, default=1, help="number of input chanmnels")
         self.opt.add_argument("--isize",type=int,default=28 ,help="size of image")
