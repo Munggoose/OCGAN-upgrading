@@ -25,8 +25,6 @@ if __name__=='__main__':
         
     #     model.visual(True)
 
-
-
     for epoch in tqdm(range(opt.n_epochs),ncols=100):
         for inputs, labels in dataloader:
             model.set_input(inputs,labels)
